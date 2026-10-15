@@ -3,6 +3,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import stat
 import subprocess
 import sys
 import tempfile
@@ -72,6 +73,27 @@ class ModTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             mods.build_overlay(self.game, self.root / 'out', [('A', a)])
         self.assertEqual((self.assets / 'b.dcx').read_bytes(), b'untouched')
+        self.assertEqual(list((self.root / 'out').iterdir()), [])
+
+    def test_read_only_game_files_are_replaced_and_kept_read_only(self):
+        # Windows won't delete a read-only file, and hard links share the attribute (WinError 5).
+        for name in ('a.dcx', 'b.dcx'):
+            os.chmod(self.assets / name, stat.S_IREAD)
+        a = self.mod('A')
+        result = mods.build_overlay(self.game, self.root / 'out', [('A', a)])
+        self.assertEqual((result / 'dvdroot_ps4/chr/a.dcx').read_bytes(), b'mod')
+        mods.LINKED.clear()  # as run.py, which removes the view in another process
+        mods.remove_overlay(result, self.game)
+        self.assertEqual(list((self.root / 'out').iterdir()), [])
+        for name in ('a.dcx', 'b.dcx'):
+            self.assertFalse(os.stat(self.assets / name).st_mode & stat.S_IWRITE)
+        self.assertEqual((self.assets / 'a.dcx').read_bytes(), b'original')
+        # A failed merge removes its partial view too.
+        nested = a / 'dvdroot_ps4/chr/b.dcx'
+        nested.mkdir()
+        (nested / 'child').write_bytes(b'bad')
+        with self.assertRaises(ValueError):
+            mods.build_overlay(self.game, self.root / 'out', [('A', a)])
         self.assertEqual(list((self.root / 'out').iterdir()), [])
 
     def test_mod_symlinks_rejected(self):
