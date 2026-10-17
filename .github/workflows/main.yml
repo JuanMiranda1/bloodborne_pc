@@ -1,0 +1,35 @@
+name: Build Bloodborne Port Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Descargar tu codigo hibrido
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Ejecutar el empaquetador del proyecto
+        shell: bash
+        run: |
+          pip install pyinstaller
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          bash packaging/windows/package.sh
+
+      - name: Subir emulador compilado para descargar
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bloodborne-PC-Hibrido
+          path: |
+            dist/**
+            build/**
+            *.exe
+            *.dll
