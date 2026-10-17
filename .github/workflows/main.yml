@@ -15,6 +15,15 @@ jobs:
       - name: Activar compiladores C++ de Windows
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Instalar Vulkan SDK
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-sdk.exe" -OutFile "vulkan-sdk.exe"
+          Start-Process -FilePath ".\vulkan-sdk.exe" -ArgumentList "--accept-licenses", "--default-answer", "--confirm-command", "install" -Wait
+          $sdkPath = Get-ChildItem "C:\VulkanSDK" | Select-Object -First 1 -ExpandProperty FullName
+          echo "VULKAN_SDK=$sdkPath" >> $env:GITHUB_ENV
+          echo "$sdkPath\Bin" >> $env:GITHUB_PATH
+
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
