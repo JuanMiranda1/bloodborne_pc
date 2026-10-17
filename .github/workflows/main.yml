@@ -12,16 +12,20 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Activar compiladores C++ de Windows
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Ejecutar el empaquetador del proyecto
+      - name: Compilar y empaquetar el proyecto
         shell: bash
         run: |
           pip install pyinstaller
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          bash build.sh
           bash packaging/windows/package.sh
 
       - name: Subir emulador compilado para descargar
@@ -31,5 +35,8 @@ jobs:
           path: |
             dist/**
             build/**
+            release/**
+            out/**
             *.exe
             *.dll
+            *.zip
